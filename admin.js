@@ -1,6 +1,6 @@
 /**
  * HOST ADMIN CONTROLLER (STAGE BUZZER ENGINE)
- * Tracks connected teams, provides team removal controls, highlights winner team in real-time.
+ * Handles team roster, win counters, projector fullscreen mode, and millisecond feeds.
  */
 
 import {
@@ -33,6 +33,8 @@ const onlineTeamCount = document.getElementById('online-team-count');
 const teamsCountBadge = document.getElementById('teams-count-badge');
 const adminTeamsList = document.getElementById('admin-teams-list');
 const btnClearAllTeams = document.getElementById('btn-clear-all-teams');
+const btnToggleProjector = document.getElementById('btn-toggle-projector');
+const btnCloseProjector = document.getElementById('btn-close-projector');
 
 const btnStartQuestion = document.getElementById('btn-start-question');
 const btnResetQuestion = document.getElementById('btn-reset-question');
@@ -51,6 +53,7 @@ let currentSubscribersUnsubscribe = null;
 let previousWinnerId = null;
 let registeredTeamsMap = {};
 let activeSubmissionsMap = {};
+let teamWinsMap = {}; // teamId -> totalWins
 
 function init() {
   checkAdminAuth();
@@ -128,7 +131,17 @@ function setupEventListeners() {
   if (btnClearAllTeams) {
     btnClearAllTeams.addEventListener('click', async () => {
       if (confirm('Are you sure you want to remove ALL registered teams?')) {
+        teamWinsMap = {};
         await clearAllTeams();
+      }
+    });
+  }
+
+  if (btnToggleProjector && adminWinnerBanner) {
+    btnToggleProjector.addEventListener('click', () => {
+      adminWinnerBanner.classList.toggle('projector-fullscreen');
+      if (btnCloseProjector) {
+        btnCloseProjector.style.display = adminWinnerBanner.classList.contains('projector-fullscreen') ? 'inline-block' : 'none';
       }
     });
   }
@@ -171,12 +184,13 @@ function updateAdminUI(state) {
   if (winner && (status === 'winner_selected' || status === 'locked')) {
     if (adminWinnerBanner) adminWinnerBanner.style.display = 'block';
     if (adminWinnerTeam) adminWinnerTeam.textContent = winner.teamName || 'Unknown Team';
-    if (adminWinnerTime) adminWinnerTime.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+    if (adminWinnerTime) adminWinnerTime.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(3)}s`;
 
     if (adminWinnerCallout) adminWinnerCallout.textContent = winner.teamName || 'Team';
 
     if (previousWinnerId !== winner.teamId) {
       previousWinnerId = winner.teamId;
+      teamWinsMap[winner.teamId] = (teamWinsMap[winner.teamId] || 0) + 1;
       playWinnerChime();
     }
   } else {
@@ -246,6 +260,7 @@ function renderTeamsRoster() {
   teams.forEach((t) => {
     const isWinner = t.teamId === winnerTeamId;
     const hasBuzzed = Boolean(activeSubmissionsMap[t.teamId]);
+    const winCount = teamWinsMap[t.teamId] || 0;
 
     let extraClass = '';
     if (isWinner) {
@@ -254,6 +269,7 @@ function renderTeamsRoster() {
       extraClass = 'buzzed';
     }
 
+    const winBadge = winCount > 0 ? `<span class="win-badge">🏆 ${winCount}</span>` : '';
     const chip = document.createElement('div');
     chip.className = `team-chip ${t.online ? 'online' : ''} ${extraClass}`;
 
@@ -261,15 +277,16 @@ function renderTeamsRoster() {
     chip.innerHTML = `
       <span class="online-dot"></span>
       <span>${icon}${escapeHtml(t.teamName || t.teamId)}</span>
+      ${winBadge}
       <button class="btn-remove-single-team" data-id="${t.teamId}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.75rem; margin-left:6px; font-weight:bold;" title="Remove this team">❌</button>
     `;
 
-    // Attach click handler to remove button
     const btnRemove = chip.querySelector('.btn-remove-single-team');
     if (btnRemove) {
       btnRemove.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (confirm(`Remove team "${t.teamName || t.teamId}"?`)) {
+          delete teamWinsMap[t.teamId];
           await removeTeam(t.teamId);
         }
       });
@@ -305,7 +322,7 @@ function renderSubmissionsTable(submissionsMap, winnerTeamId) {
     }
 
     const rankDisplay = isWinner ? '🥇 1st (WINNER)' : `#${idx + 1}`;
-    const timeDisplay = `${((s.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+    const timeDisplay = `${((s.timeTakenMs || 0) / 1000).toFixed(3)}s`;
 
     tr.innerHTML = `
       <td>${rankDisplay}</td>

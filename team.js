@@ -1,12 +1,11 @@
 /**
  * TEAM STAGE BUZZER CONTROLLER
- * Supports real-time admin team removal detection and automatic logout.
+ * Ultra-fast single-touch buzzer button with haptic feedback & victory fanfare.
  */
 
 import {
   subscribeQuizState,
   subscribeConnectionStatus,
-  subscribeTeams,
   registerTeamPresence,
   submitTeamAnswer
 } from './firebase.js';
@@ -46,7 +45,6 @@ function init() {
   setupEventListeners();
   setupConnectionMonitor();
   subscribeToBuzzerState();
-  subscribeToTeamsMonitor();
 }
 
 function loadStoredTeamIdentity() {
@@ -133,26 +131,6 @@ function subscribeToBuzzerState() {
   });
 }
 
-// Detect if Host Removed this Team
-function subscribeToTeamsMonitor() {
-  subscribeTeams((teamsMap) => {
-    if (!teamsMap) return;
-    const teamKeys = Object.keys(teamsMap);
-
-    if (currentTeam.id) {
-      const isPresent = Boolean(teamsMap[currentTeam.id]);
-      if (!isPresent && hasLoadedTeamsOnce && teamKeys.length >= 0) {
-        // Host kicked/removed team -> reset to login screen
-        localStorage.removeItem('quiz_team_name');
-        localStorage.removeItem('quiz_team_id');
-        currentTeam = { id: '', name: '' };
-        renderTeamLoginUI();
-      }
-    }
-    hasLoadedTeamsOnce = true;
-  });
-}
-
 function renderBuzzerState(state) {
   const { status, winner, currentQuestionId } = state;
   const roundId = currentQuestionId || 'r1';
@@ -213,10 +191,14 @@ function renderBuzzerState(state) {
       if (winner) {
         if (viewWinnerHero) viewWinnerHero.style.display = 'block';
         if (winnerNameDisplay) winnerNameDisplay.textContent = winner.teamName || 'Unknown Team';
-        if (winnerTimeDisplay) winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+        if (winnerTimeDisplay) winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(3)}s`;
 
+        const isVictory = (winner.teamId === currentTeam.id);
         if (yourTeamVictoryTag) {
-          yourTeamVictoryTag.style.display = (winner.teamId === currentTeam.id) ? 'block' : 'none';
+          yourTeamVictoryTag.style.display = isVictory ? 'block' : 'none';
+        }
+        if (isVictory) {
+          triggerVictoryFanfare();
         }
       }
       break;
@@ -226,6 +208,11 @@ function renderBuzzerState(state) {
 async function handleBuzzerPress() {
   if (isSubmitting || !currentRoundState || currentRoundState.status !== 'live') return;
   isSubmitting = true;
+
+  // Haptic feedback
+  if (navigator.vibrate) {
+    try { navigator.vibrate([100, 50, 100]); } catch (e) {}
+  }
 
   const roundId = currentRoundState.currentQuestionId || 'r1';
 
@@ -255,6 +242,25 @@ async function handleBuzzerPress() {
   } finally {
     isSubmitting = false;
   }
+}
+
+function triggerVictoryFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + idx * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.1 + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + idx * 0.1);
+      osc.stop(ctx.currentTime + idx * 0.1 + 0.3);
+    });
+  } catch (e) {}
 }
 
 function updateStatusBadge(status) {

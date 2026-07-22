@@ -19,6 +19,8 @@
     </a>
 
     <div style="display: flex; align-items: center; gap: 1rem;">
+      <button id="btn-toggle-projector" class="btn btn-outline" style="padding: 0.4rem 0.9rem; font-size: 0.85rem; border-color: var(--accent-gold); color: var(--accent-gold);" title="Toggle Fullscreen Stage Presentation Mode">📺 Stage Mode</button>
+
       <div id="admin-session-badge" style="display: none; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 0.4rem 0.9rem; border-radius: var(--radius-pill); font-weight: 700; font-family: var(--font-heading);">
         <span style="color: var(--accent-cyan);">🛡️ Host Active</span>
         <button id="btn-admin-logout" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.85rem; font-weight: 700; margin-left: 6px;">Logout</button>
@@ -95,11 +97,12 @@
             <div class="winner-title">FIRST TEAM TO BUZZ!</div>
             <div class="winner-team-name" id="admin-winner-team">Team 7</div>
             <div class="winner-details">
-              <span>⚡ Reaction Time: <strong id="admin-winner-time">0.42s</strong></span>
+              <span>⚡ Reaction Time: <strong id="admin-winner-time">0.420s</strong></span>
             </div>
             <div style="margin-top: 1.25rem; font-size: 1.1rem; color: #fef08a; font-weight: 700;">
               📢 Host: Ask <u id="admin-winner-callout">Team 7</u> for their answer out loud!
             </div>
+            <button id="btn-close-projector" class="btn btn-outline" style="margin-top: 1rem; display: none; background: rgba(0,0,0,0.5);" onclick="document.getElementById('admin-winner-banner').classList.remove('projector-fullscreen'); this.style.display='none';">❌ Exit Fullscreen Presentation</button>
           </div>
 
           <!-- PRIMARY STAGE CONTROL CARD -->
