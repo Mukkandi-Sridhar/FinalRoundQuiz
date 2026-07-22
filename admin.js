@@ -1,8 +1,6 @@
 /**
  * HOST ADMIN CONTROLLER (4-OPTION RESPONSE ENGINE)
- * Question-free Stage Quiz Controller. Tracks connected teams,
- * highlights the winner and selected option (A, B, C, D) in real-time,
- * and provides one-click round resets.
+ * Hardened with safe optional chaining to guarantee zero runtime null errors.
  */
 
 import {
@@ -72,69 +70,74 @@ function checkAdminAuth() {
 }
 
 function renderLoginCard() {
-  adminLoginCard.style.display = 'block';
-  adminDashboardContainer.style.display = 'none';
-  adminSessionBadge.style.display = 'none';
+  if (adminLoginCard) adminLoginCard.style.display = 'block';
+  if (adminDashboardContainer) adminDashboardContainer.style.display = 'none';
+  if (adminSessionBadge) adminSessionBadge.style.display = 'none';
 }
 
 function renderDashboard() {
-  adminLoginCard.style.display = 'none';
-  adminDashboardContainer.style.display = 'block';
-  adminSessionBadge.style.display = 'inline-flex';
+  if (adminLoginCard) adminLoginCard.style.display = 'none';
+  if (adminDashboardContainer) adminDashboardContainer.style.display = 'block';
+  if (adminSessionBadge) adminSessionBadge.style.display = 'inline-flex';
 
   subscribeToQuizState();
   subscribeToTeamsRoster();
 }
 
 function setupEventListeners() {
-  adminLoginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const user = adminUserInput.value.trim();
-    const pass = adminPassInput.value.trim();
+  if (adminLoginForm) {
+    adminLoginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = adminUserInput ? adminUserInput.value.trim() : '';
+      const pass = adminPassInput ? adminPassInput.value.trim() : '';
 
-    if (user === 'admin' && pass === 'admin123') {
-      sessionStorage.setItem('quiz_admin_auth', 'true');
-      adminAuthError.style.display = 'none';
-      renderDashboard();
-    } else {
-      adminAuthError.style.display = 'block';
-    }
-  });
-
-  btnAdminLogout.addEventListener('click', () => {
-    sessionStorage.removeItem('quiz_admin_auth');
-    renderLoginCard();
-  });
-
-  // OPEN OPTIONS NOW
-  btnStartQuestion.addEventListener('click', async () => {
-    await startQuestion({
-      id: `round_${roundCount}`,
-      number: roundCount,
-      options: ['Option A', 'Option B', 'Option C', 'Option D']
+      if (user === 'admin' && pass === 'admin123') {
+        sessionStorage.setItem('quiz_admin_auth', 'true');
+        if (adminAuthError) adminAuthError.style.display = 'none';
+        renderDashboard();
+      } else {
+        if (adminAuthError) adminAuthError.style.display = 'block';
+      }
     });
-  });
+  }
 
-  // RESET / NEXT ROUND
-  btnResetQuestion.addEventListener('click', async () => {
-    roundCount++;
-    adminRoundCounter.textContent = `ROUND #${roundCount}`;
-    await resetQuestion({
-      id: `round_${roundCount}`,
-      number: roundCount,
-      options: ['Option A', 'Option B', 'Option C', 'Option D']
+  if (btnAdminLogout) {
+    btnAdminLogout.addEventListener('click', () => {
+      sessionStorage.removeItem('quiz_admin_auth');
+      renderLoginCard();
     });
-  });
+  }
+
+  if (btnStartQuestion) {
+    btnStartQuestion.addEventListener('click', async () => {
+      await startQuestion({
+        id: `round_${roundCount}`,
+        number: roundCount,
+        options: ['Option A', 'Option B', 'Option C', 'Option D']
+      });
+    });
+  }
+
+  if (btnResetQuestion) {
+    btnResetQuestion.addEventListener('click', async () => {
+      roundCount++;
+      if (adminRoundCounter) adminRoundCounter.textContent = `ROUND #${roundCount}`;
+      await resetQuestion({
+        id: `round_${roundCount}`,
+        number: roundCount,
+        options: ['Option A', 'Option B', 'Option C', 'Option D']
+      });
+    });
+  }
 }
 
 function setupConnectionMonitor() {
   subscribeConnectionStatus((isConnected) => {
-    if (isConnected) {
-      adminConnectionBadge.className = 'status-badge badge-live';
-      adminConnText.textContent = 'ONLINE';
-    } else {
-      adminConnectionBadge.className = 'status-badge badge-locked';
-      adminConnText.textContent = 'OFFLINE';
+    if (adminConnectionBadge) {
+      adminConnectionBadge.className = 'status-badge ' + (isConnected ? 'badge-live' : 'badge-locked');
+    }
+    if (adminConnText) {
+      adminConnText.textContent = isConnected ? 'ONLINE' : 'OFFLINE';
     }
   });
 }
@@ -150,39 +153,40 @@ function subscribeToQuizState() {
 function updateAdminUI(state) {
   const { status, winner, currentQuestionId, currentQuestion } = state;
 
-  if (currentQuestion && currentQuestion.number) {
+  if (adminRoundCounter && currentQuestion && currentQuestion.number) {
     roundCount = currentQuestion.number;
     adminRoundCounter.textContent = `ROUND #${roundCount}`;
   }
 
   updateAdminStatusBadge(status);
 
-  if (status === 'live') {
-    btnStartQuestion.disabled = true;
-    btnStartQuestion.textContent = '▶️ OPTIONS OPEN & LIVE';
-  } else {
-    btnStartQuestion.disabled = false;
-    btnStartQuestion.textContent = '▶️ OPEN OPTIONS NOW';
+  if (btnStartQuestion) {
+    if (status === 'live') {
+      btnStartQuestion.disabled = true;
+      btnStartQuestion.textContent = '▶️ OPTIONS OPEN & LIVE';
+    } else {
+      btnStartQuestion.disabled = false;
+      btnStartQuestion.textContent = '▶️ OPEN OPTIONS NOW';
+    }
   }
 
-  // PROMINENT WINNER HIGHLIGHT
   if (winner && (status === 'winner_selected' || status === 'locked')) {
     const optLabel = OPTION_LABELS[winner.selectedOptionIndex] || `Option ${winner.selectedOptionIndex + 1}`;
     
-    adminWinnerBanner.style.display = 'block';
-    adminWinnerTeam.textContent = winner.teamName || 'Unknown Team';
-    adminWinnerTime.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
-    adminWinnerOption.textContent = `Option ${optLabel}`;
+    if (adminWinnerBanner) adminWinnerBanner.style.display = 'block';
+    if (adminWinnerTeam) adminWinnerTeam.textContent = winner.teamName || 'Unknown Team';
+    if (adminWinnerTime) adminWinnerTime.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+    if (adminWinnerOption) adminWinnerOption.textContent = `Option ${optLabel}`;
 
-    adminWinnerCallout.textContent = winner.teamName || 'Team';
-    adminWinnerOptCallout.textContent = `Option ${optLabel}`;
+    if (adminWinnerCallout) adminWinnerCallout.textContent = winner.teamName || 'Team';
+    if (adminWinnerOptCallout) adminWinnerOptCallout.textContent = `Option ${optLabel}`;
 
     if (previousWinnerId !== winner.teamId) {
       previousWinnerId = winner.teamId;
       playWinnerChime();
     }
   } else {
-    adminWinnerBanner.style.display = 'none';
+    if (adminWinnerBanner) adminWinnerBanner.style.display = 'none';
     previousWinnerId = null;
   }
 
@@ -200,6 +204,8 @@ function updateAdminUI(state) {
 }
 
 function updateAdminStatusBadge(status) {
+  if (!adminStatusBadge || !adminStatusText) return;
+
   adminStatusBadge.className = 'status-badge ';
   switch (status) {
     case 'waiting':
@@ -229,13 +235,14 @@ function subscribeToTeamsRoster() {
 }
 
 function renderTeamsRoster() {
+  if (!adminTeamsList) return;
   adminTeamsList.innerHTML = '';
   const teams = Object.values(registeredTeamsMap);
   const onlineTeams = teams.filter((t) => t.online);
   const winnerTeamId = currentQuizState?.winner?.teamId;
 
-  onlineTeamCount.textContent = `${onlineTeams.length} Online`;
-  teamsCountBadge.textContent = `${onlineTeams.length} / ${teams.length} Registered`;
+  if (onlineTeamCount) onlineTeamCount.textContent = `${onlineTeams.length} Online`;
+  if (teamsCountBadge) teamsCountBadge.textContent = `${onlineTeams.length} / ${teams.length} Registered`;
 
   if (teams.length === 0) {
     adminTeamsList.innerHTML = `<span style="font-size: 0.85rem; color: var(--text-dim);">No teams registered yet...</span>`;
@@ -274,6 +281,7 @@ function renderTeamsRoster() {
 }
 
 function renderSubmissionsTable(submissionsMap, winnerTeamId) {
+  if (!submissionsTableBody) return;
   submissionsTableBody.innerHTML = '';
   const subs = Object.values(submissionsMap || {});
 

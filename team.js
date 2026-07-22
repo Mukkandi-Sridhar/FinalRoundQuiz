@@ -1,6 +1,7 @@
 /**
  * TEAM CONTROLLER (4-OPTION RESPONSE ENGINE)
  * Renders 4 touch option buttons (A, B, C, D) with single-touch atomic lock.
+ * Hardened with safe optional chaining for 100% crash-proof rendering.
  */
 
 import {
@@ -65,53 +66,56 @@ function loadStoredTeamIdentity() {
 }
 
 function renderTeamLoggedInUI() {
-  teamLoginContainer.style.display = 'none';
-  quizArenaContainer.style.display = 'block';
-  teamInfoBadge.style.display = 'inline-flex';
-  currentTeamNameDisplay.textContent = currentTeam.name;
+  if (teamLoginContainer) teamLoginContainer.style.display = 'none';
+  if (quizArenaContainer) quizArenaContainer.style.display = 'block';
+  if (teamInfoBadge) teamInfoBadge.style.display = 'inline-flex';
+  if (currentTeamNameDisplay) currentTeamNameDisplay.textContent = currentTeam.name;
 }
 
 function renderTeamLoginUI() {
-  teamLoginContainer.style.display = 'block';
-  quizArenaContainer.style.display = 'none';
-  teamInfoBadge.style.display = 'none';
+  if (teamLoginContainer) teamLoginContainer.style.display = 'block';
+  if (quizArenaContainer) quizArenaContainer.style.display = 'none';
+  if (teamInfoBadge) teamInfoBadge.style.display = 'none';
 }
 
 function setupEventListeners() {
-  teamLoginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = teamNameInput.value.trim();
-    if (!name) return;
+  if (teamLoginForm) {
+    teamLoginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = teamNameInput ? teamNameInput.value.trim() : '';
+      if (!name) return;
 
-    const id = 'team_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-    currentTeam.name = name;
-    currentTeam.id = id;
+      const id = 'team_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      currentTeam.name = name;
+      currentTeam.id = id;
 
-    localStorage.setItem('quiz_team_name', name);
-    localStorage.setItem('quiz_team_id', id);
+      localStorage.setItem('quiz_team_name', name);
+      localStorage.setItem('quiz_team_id', id);
 
-    renderTeamLoggedInUI();
-    registerTeamPresence(currentTeam.id, currentTeam.name);
-  });
+      renderTeamLoggedInUI();
+      registerTeamPresence(currentTeam.id, currentTeam.name);
+    });
+  }
 
-  btnChangeTeam.addEventListener('click', () => {
-    if (confirm('Switch team identity?')) {
-      localStorage.removeItem('quiz_team_name');
-      localStorage.removeItem('quiz_team_id');
-      currentTeam = { id: '', name: '' };
-      renderTeamLoginUI();
-    }
-  });
+  if (btnChangeTeam) {
+    btnChangeTeam.addEventListener('click', () => {
+      if (confirm('Switch team identity?')) {
+        localStorage.removeItem('quiz_team_name');
+        localStorage.removeItem('quiz_team_id');
+        currentTeam = { id: '', name: '' };
+        renderTeamLoginUI();
+      }
+    });
+  }
 }
 
 function setupConnectionMonitor() {
   subscribeConnectionStatus((isConnected) => {
-    if (isConnected) {
-      teamConnectionBadge.className = 'status-badge badge-live';
-      teamConnText.textContent = 'ONLINE';
-    } else {
-      teamConnectionBadge.className = 'status-badge badge-locked';
-      teamConnText.textContent = 'OFFLINE';
+    if (teamConnectionBadge) {
+      teamConnectionBadge.className = 'status-badge ' + (isConnected ? 'badge-live' : 'badge-locked');
+    }
+    if (teamConnText) {
+      teamConnText.textContent = isConnected ? 'ONLINE' : 'OFFLINE';
     }
   });
 }
@@ -128,7 +132,7 @@ function renderOptionsState(state) {
   const { status, winner, currentQuestionId, currentQuestion } = state;
   const roundId = currentQuestionId || 'r1';
 
-  if (currentQuestion && currentQuestion.number) {
+  if (roundNumTag && currentQuestion && currentQuestion.number) {
     roundNumTag.textContent = `ROUND #${currentQuestion.number}`;
   }
 
@@ -138,60 +142,66 @@ function renderOptionsState(state) {
   const alreadyAnswered = localStorage.getItem(hasAnsweredKey) === 'true';
   const savedChoice = localStorage.getItem(`choice_${roundId}_${currentTeam.id}`);
 
-  // Render 4 Option Buttons
-  optionsContainer.innerHTML = '';
-  OPTION_LABELS.forEach((label, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'option-btn';
-    btn.dataset.index = idx;
-    btn.innerHTML = `
-      <div class="option-badge">${label}</div>
-      <div style="flex: 1;">Option ${label}</div>
-    `;
+  // Render 4 Option Buttons safely
+  if (optionsContainer) {
+    optionsContainer.innerHTML = '';
+    OPTION_LABELS.forEach((label, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.dataset.index = idx;
+      btn.innerHTML = `
+        <div class="option-badge">${label}</div>
+        <div style="flex: 1;">Option ${label}</div>
+      `;
 
-    if (status !== 'live' || alreadyAnswered) {
-      btn.disabled = true;
-      if (alreadyAnswered && savedChoice == idx) {
-        btn.classList.add('selected');
+      if (status !== 'live' || alreadyAnswered) {
+        btn.disabled = true;
+        if (alreadyAnswered && savedChoice == idx) {
+          btn.classList.add('selected');
+        }
+      } else {
+        btn.disabled = false;
+        btn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          handleOptionSelection(roundId, idx, `Option ${label}`);
+        });
       }
-    } else {
-      btn.disabled = false;
-      btn.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        handleOptionSelection(roundId, idx, `Option ${label}`);
-      });
-    }
 
-    optionsContainer.appendChild(btn);
-  });
+      optionsContainer.appendChild(btn);
+    });
+  }
 
-  // Handle Feedback & Banner View
+  // Handle Feedback & Banner View safely
   if (status === 'live') {
-    viewWinnerHero.style.display = 'none';
-    optionsInstructionText.textContent = alreadyAnswered
-      ? '🔒 Choice submitted. Waiting for fastest team declaration...'
-      : '⚡ Tap your choice now!';
-    submissionFeedbackBar.style.display = alreadyAnswered ? 'block' : 'none';
+    if (viewWinnerHero) viewWinnerHero.style.display = 'none';
+    if (optionsInstructionText) {
+      optionsInstructionText.textContent = alreadyAnswered
+        ? '🔒 Choice submitted. Waiting for fastest team declaration...'
+        : '⚡ Tap your choice now!';
+    }
+    if (submissionFeedbackBar) {
+      submissionFeedbackBar.style.display = alreadyAnswered ? 'block' : 'none';
+    }
   } else if (status === 'waiting') {
-    viewWinnerHero.style.display = 'none';
-    optionsInstructionText.textContent = 'Host will open options shortly. Stand by!';
-    submissionFeedbackBar.style.display = 'none';
+    if (viewWinnerHero) viewWinnerHero.style.display = 'none';
+    if (optionsInstructionText) {
+      optionsInstructionText.textContent = 'Host will open options shortly. Stand by!';
+    }
+    if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'none';
   } else if (status === 'winner_selected' || status === 'locked') {
-    optionsInstructionText.textContent = 'Round completed.';
-    submissionFeedbackBar.style.display = 'none';
+    if (optionsInstructionText) optionsInstructionText.textContent = 'Round completed.';
+    if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'none';
 
     if (winner) {
-      viewWinnerHero.style.display = 'block';
-      winnerNameDisplay.textContent = winner.teamName || 'Unknown Team';
-      winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+      if (viewWinnerHero) viewWinnerHero.style.display = 'block';
+      if (winnerNameDisplay) winnerNameDisplay.textContent = winner.teamName || 'Unknown Team';
+      if (winnerTimeDisplay) winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
       
       const optLabel = OPTION_LABELS[winner.selectedOptionIndex] || `Option ${winner.selectedOptionIndex + 1}`;
-      winnerOptionDisplay.textContent = `Option ${optLabel}`;
+      if (winnerOptionDisplay) winnerOptionDisplay.textContent = `Option ${optLabel}`;
 
-      if (winner.teamId === currentTeam.id) {
-        yourTeamVictoryTag.style.display = 'block';
-      } else {
-        yourTeamVictoryTag.style.display = 'none';
+      if (yourTeamVictoryTag) {
+        yourTeamVictoryTag.style.display = (winner.teamId === currentTeam.id) ? 'block' : 'none';
       }
     }
   }
@@ -201,26 +211,24 @@ async function handleOptionSelection(roundId, optionIndex, optionText) {
   if (isSubmitting || !currentRoundState || currentRoundState.status !== 'live') return;
   isSubmitting = true;
 
-  // Disable all buttons immediately
-  const buttons = optionsContainer.querySelectorAll('.option-btn');
-  buttons.forEach((b, idx) => {
-    b.disabled = true;
-    if (idx === optionIndex) {
-      b.classList.add('selected');
-    }
-  });
+  if (optionsContainer) {
+    const buttons = optionsContainer.querySelectorAll('.option-btn');
+    buttons.forEach((b, idx) => {
+      b.disabled = true;
+      if (idx === optionIndex) {
+        b.classList.add('selected');
+      }
+    });
+  }
 
-  submissionFeedbackBar.style.display = 'block';
+  if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'block';
 
-  // Save to LocalStorage
   localStorage.setItem(`answered_${roundId}_${currentTeam.id}`, 'true');
   localStorage.setItem(`choice_${roundId}_${currentTeam.id}`, optionIndex);
 
-  // Reaction Time
   const startTime = currentRoundState.questionStartTime || Date.now();
   const timeTakenMs = Math.max(0, Date.now() - startTime);
 
-  // Submit Atomic Transaction
   try {
     await submitTeamAnswer(
       roundId,
@@ -238,6 +246,8 @@ async function handleOptionSelection(roundId, optionIndex, optionText) {
 }
 
 function updateStatusBadge(status) {
+  if (!liveQuizStatusBadge || !liveStatusText) return;
+
   liveQuizStatusBadge.className = 'status-badge ';
   switch (status) {
     case 'waiting':
