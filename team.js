@@ -1,6 +1,7 @@
 /**
  * TEAM STAGE BUZZER CONTROLLER
- * Ultra-fast single-touch buzzer button with haptic feedback & victory fanfare.
+ * High-concurrency support: Generates unique device UUIDs to prevent name collisions
+ * when 20+ teams join simultaneously across smartphones.
  */
 
 import {
@@ -38,7 +39,15 @@ const buzzerSubtext = document.getElementById('buzzer-subtext');
 let currentTeam = { id: '', name: '' };
 let currentRoundState = null;
 let isSubmitting = false;
-let hasLoadedTeamsOnce = false;
+
+function getOrCreateDeviceId() {
+  let uuid = localStorage.getItem('quiz_device_uuid');
+  if (!uuid) {
+    uuid = Math.random().toString(36).substring(2, 8) + Date.now().toString(36).slice(-4);
+    localStorage.setItem('quiz_device_uuid', uuid);
+  }
+  return uuid;
+}
 
 function init() {
   loadStoredTeamIdentity();
@@ -81,7 +90,8 @@ function setupEventListeners() {
       const name = teamNameInput ? teamNameInput.value.trim() : '';
       if (!name) return;
 
-      const id = 'team_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const deviceUuid = getOrCreateDeviceId();
+      const id = 'team_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + deviceUuid;
       currentTeam.name = name;
       currentTeam.id = id;
 
@@ -209,7 +219,6 @@ async function handleBuzzerPress() {
   if (isSubmitting || !currentRoundState || currentRoundState.status !== 'live') return;
   isSubmitting = true;
 
-  // Haptic feedback
   if (navigator.vibrate) {
     try { navigator.vibrate([100, 50, 100]); } catch (e) {}
   }
@@ -247,7 +256,7 @@ async function handleBuzzerPress() {
 function triggerVictoryFanfare() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+    const notes = [523.25, 659.25, 783.99, 1046.50];
     notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
