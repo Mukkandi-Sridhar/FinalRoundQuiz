@@ -1,7 +1,6 @@
 /**
- * TEAM CONTROLLER (4-OPTION RESPONSE ENGINE)
- * Renders 4 touch option buttons (A, B, C, D) with single-touch atomic lock.
- * Hardened with safe optional chaining for 100% crash-proof rendering.
+ * TEAM STAGE BUZZER CONTROLLER
+ * Ultra-fast single-touch buzzer button with sub-millisecond atomic locking.
  */
 
 import {
@@ -23,32 +22,28 @@ const btnChangeTeam = document.getElementById('btn-change-team');
 const teamConnectionBadge = document.getElementById('team-connection-badge');
 const teamConnText = document.getElementById('team-conn-text');
 
-const roundNumTag = document.getElementById('round-num-tag');
 const liveQuizStatusBadge = document.getElementById('live-quiz-status-badge');
 const liveStatusText = document.getElementById('live-status-text');
 
 const viewWinnerHero = document.getElementById('view-winner-hero');
 const winnerNameDisplay = document.getElementById('winner-name-display');
 const winnerTimeDisplay = document.getElementById('winner-time-display');
-const winnerOptionDisplay = document.getElementById('winner-option-display');
 const yourTeamVictoryTag = document.getElementById('your-team-victory-tag');
 
-const optionsContainer = document.getElementById('options-container');
-const submissionFeedbackBar = document.getElementById('submission-feedback-bar');
-const optionsInstructionText = document.getElementById('options-instruction-text');
+const giantBuzzerBtn = document.getElementById('giant-buzzer-btn');
+const buzzerBtnText = document.getElementById('buzzer-btn-text');
+const buzzerSubtext = document.getElementById('buzzer-subtext');
 
 // State Variables
 let currentTeam = { id: '', name: '' };
 let currentRoundState = null;
 let isSubmitting = false;
 
-const OPTION_LABELS = ['A', 'B', 'C', 'D'];
-
 function init() {
   loadStoredTeamIdentity();
   setupEventListeners();
   setupConnectionMonitor();
-  subscribeToRoundState();
+  subscribeToBuzzerState();
 }
 
 function loadStoredTeamIdentity() {
@@ -107,6 +102,13 @@ function setupEventListeners() {
       }
     });
   }
+
+  if (giantBuzzerBtn) {
+    giantBuzzerBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handleBuzzerPress();
+    });
+  }
 }
 
 function setupConnectionMonitor() {
@@ -120,126 +122,113 @@ function setupConnectionMonitor() {
   });
 }
 
-function subscribeToRoundState() {
+function subscribeToBuzzerState() {
   subscribeQuizState((state) => {
     if (!state) return;
     currentRoundState = state;
-    renderOptionsState(state);
+    renderBuzzerState(state);
   });
 }
 
-function renderOptionsState(state) {
-  const { status, winner, currentQuestionId, currentQuestion } = state;
+function renderBuzzerState(state) {
+  const { status, winner, currentQuestionId } = state;
   const roundId = currentQuestionId || 'r1';
-
-  if (roundNumTag && currentQuestion && currentQuestion.number) {
-    roundNumTag.textContent = `ROUND #${currentQuestion.number}`;
-  }
 
   updateStatusBadge(status);
 
-  const hasAnsweredKey = `answered_${roundId}_${currentTeam.id}`;
-  const alreadyAnswered = localStorage.getItem(hasAnsweredKey) === 'true';
-  const savedChoice = localStorage.getItem(`choice_${roundId}_${currentTeam.id}`);
+  const hasBuzzedKey = `buzzed_${roundId}_${currentTeam.id}`;
+  const alreadyBuzzed = localStorage.getItem(hasBuzzedKey) === 'true';
 
-  // Render 4 Option Buttons safely
-  if (optionsContainer) {
-    optionsContainer.innerHTML = '';
-    OPTION_LABELS.forEach((label, idx) => {
-      const btn = document.createElement('button');
-      btn.className = 'option-btn';
-      btn.dataset.index = idx;
-      btn.innerHTML = `
-        <div class="option-badge">${label}</div>
-        <div style="flex: 1;">Option ${label}</div>
-      `;
+  switch (status) {
+    case 'waiting':
+      if (viewWinnerHero) viewWinnerHero.style.display = 'none';
+      if (giantBuzzerBtn) {
+        giantBuzzerBtn.disabled = true;
+        giantBuzzerBtn.className = 'giant-buzzer-btn';
+      }
+      if (buzzerBtnText) buzzerBtnText.textContent = 'WAITING...';
+      if (buzzerSubtext) buzzerSubtext.textContent = 'Host will open buzzers shortly. Stand by!';
+      break;
 
-      if (status !== 'live' || alreadyAnswered) {
-        btn.disabled = true;
-        if (alreadyAnswered && savedChoice == idx) {
-          btn.classList.add('selected');
+    case 'live':
+      if (viewWinnerHero) viewWinnerHero.style.display = 'none';
+      if (alreadyBuzzed) {
+        if (giantBuzzerBtn) {
+          giantBuzzerBtn.disabled = true;
+          giantBuzzerBtn.className = 'giant-buzzer-btn buzzed';
         }
+        if (buzzerBtnText) buzzerBtnText.textContent = 'BUZZED!';
+        if (buzzerSubtext) buzzerSubtext.textContent = '🔒 Response locked. Waiting for host verdict...';
       } else {
-        btn.disabled = false;
-        btn.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
-          handleOptionSelection(roundId, idx, `Option ${label}`);
-        });
+        if (giantBuzzerBtn) {
+          giantBuzzerBtn.disabled = false;
+          giantBuzzerBtn.className = 'giant-buzzer-btn live';
+        }
+        if (buzzerBtnText) buzzerBtnText.textContent = 'PRESS BUZZER!';
+        if (buzzerSubtext) buzzerSubtext.textContent = '⚡ TAP NOW TO CLAIM FIRST PLACE!';
       }
+      break;
 
-      optionsContainer.appendChild(btn);
-    });
-  }
-
-  // Handle Feedback & Banner View safely
-  if (status === 'live') {
-    if (viewWinnerHero) viewWinnerHero.style.display = 'none';
-    if (optionsInstructionText) {
-      optionsInstructionText.textContent = alreadyAnswered
-        ? '🔒 Choice submitted. Waiting for fastest team declaration...'
-        : '⚡ Tap your choice now!';
-    }
-    if (submissionFeedbackBar) {
-      submissionFeedbackBar.style.display = alreadyAnswered ? 'block' : 'none';
-    }
-  } else if (status === 'waiting') {
-    if (viewWinnerHero) viewWinnerHero.style.display = 'none';
-    if (optionsInstructionText) {
-      optionsInstructionText.textContent = 'Host will open options shortly. Stand by!';
-    }
-    if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'none';
-  } else if (status === 'winner_selected' || status === 'locked') {
-    if (optionsInstructionText) optionsInstructionText.textContent = 'Round completed.';
-    if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'none';
-
-    if (winner) {
-      if (viewWinnerHero) viewWinnerHero.style.display = 'block';
-      if (winnerNameDisplay) winnerNameDisplay.textContent = winner.teamName || 'Unknown Team';
-      if (winnerTimeDisplay) winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
-      
-      const optLabel = OPTION_LABELS[winner.selectedOptionIndex] || `Option ${winner.selectedOptionIndex + 1}`;
-      if (winnerOptionDisplay) winnerOptionDisplay.textContent = `Option ${optLabel}`;
-
-      if (yourTeamVictoryTag) {
-        yourTeamVictoryTag.style.display = (winner.teamId === currentTeam.id) ? 'block' : 'none';
+    case 'locked':
+    case 'closed':
+      if (giantBuzzerBtn) {
+        giantBuzzerBtn.disabled = true;
+        giantBuzzerBtn.className = 'giant-buzzer-btn';
       }
-    }
+      if (buzzerBtnText) buzzerBtnText.textContent = 'LOCKED';
+      if (buzzerSubtext) buzzerSubtext.textContent = 'Buzzers closed by Host.';
+      break;
+
+    case 'winner_selected':
+      if (giantBuzzerBtn) {
+        giantBuzzerBtn.disabled = true;
+        giantBuzzerBtn.className = 'giant-buzzer-btn';
+      }
+      if (buzzerBtnText) buzzerBtnText.textContent = 'ROUND ENDED';
+      if (buzzerSubtext) buzzerSubtext.textContent = 'Winner declared!';
+
+      if (winner) {
+        if (viewWinnerHero) viewWinnerHero.style.display = 'block';
+        if (winnerNameDisplay) winnerNameDisplay.textContent = winner.teamName || 'Unknown Team';
+        if (winnerTimeDisplay) winnerTimeDisplay.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
+
+        if (yourTeamVictoryTag) {
+          yourTeamVictoryTag.style.display = (winner.teamId === currentTeam.id) ? 'block' : 'none';
+        }
+      }
+      break;
   }
 }
 
-async function handleOptionSelection(roundId, optionIndex, optionText) {
+async function handleBuzzerPress() {
   if (isSubmitting || !currentRoundState || currentRoundState.status !== 'live') return;
   isSubmitting = true;
 
-  if (optionsContainer) {
-    const buttons = optionsContainer.querySelectorAll('.option-btn');
-    buttons.forEach((b, idx) => {
-      b.disabled = true;
-      if (idx === optionIndex) {
-        b.classList.add('selected');
-      }
-    });
+  const roundId = currentRoundState.currentQuestionId || 'r1';
+
+  if (giantBuzzerBtn) {
+    giantBuzzerBtn.disabled = true;
+    giantBuzzerBtn.className = 'giant-buzzer-btn buzzed';
   }
+  if (buzzerBtnText) buzzerBtnText.textContent = 'BUZZED!';
+  if (buzzerSubtext) buzzerSubtext.textContent = '🔒 Response locked. Waiting for host...';
 
-  if (submissionFeedbackBar) submissionFeedbackBar.style.display = 'block';
-
-  localStorage.setItem(`answered_${roundId}_${currentTeam.id}`, 'true');
-  localStorage.setItem(`choice_${roundId}_${currentTeam.id}`, optionIndex);
+  localStorage.setItem(`buzzed_${roundId}_${currentTeam.id}`, 'true');
 
   const startTime = currentRoundState.questionStartTime || Date.now();
-  const timeTakenMs = Math.max(0, Date.now() - startTime);
+  const reactionTimeMs = Math.max(0, Date.now() - startTime);
 
   try {
     await submitTeamAnswer(
       roundId,
       currentTeam.id,
       currentTeam.name,
-      optionIndex,
-      optionText,
-      timeTakenMs
+      0,
+      'Buzzer Pressed',
+      reactionTimeMs
     );
   } catch (err) {
-    console.error('Option submit error:', err);
+    console.error('Buzzer submit error:', err);
   } finally {
     isSubmitting = false;
   }
@@ -256,7 +245,7 @@ function updateStatusBadge(status) {
       break;
     case 'live':
       liveQuizStatusBadge.classList.add('badge-live');
-      liveStatusText.textContent = 'OPTIONS LIVE!';
+      liveStatusText.textContent = 'BUZZER LIVE!';
       break;
     case 'locked':
       liveQuizStatusBadge.classList.add('badge-locked');

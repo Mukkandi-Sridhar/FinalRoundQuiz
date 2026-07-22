@@ -1,6 +1,7 @@
 /**
- * HOST ADMIN CONTROLLER (4-OPTION RESPONSE ENGINE)
- * Hardened with safe optional chaining to guarantee zero runtime null errors.
+ * HOST ADMIN CONTROLLER (STAGE BUZZER ENGINE)
+ * Tracks connected teams, highlights the winner team in real-time,
+ * and provides one-click round resets.
  */
 
 import {
@@ -31,16 +32,13 @@ const onlineTeamCount = document.getElementById('online-team-count');
 const teamsCountBadge = document.getElementById('teams-count-badge');
 const adminTeamsList = document.getElementById('admin-teams-list');
 
-const adminRoundCounter = document.getElementById('admin-round-counter');
 const btnStartQuestion = document.getElementById('btn-start-question');
 const btnResetQuestion = document.getElementById('btn-reset-question');
 
 const adminWinnerBanner = document.getElementById('admin-winner-banner');
 const adminWinnerTeam = document.getElementById('admin-winner-team');
 const adminWinnerTime = document.getElementById('admin-winner-time');
-const adminWinnerOption = document.getElementById('admin-winner-option');
 const adminWinnerCallout = document.getElementById('admin-winner-callout');
-const adminWinnerOptCallout = document.getElementById('admin-winner-opt-callout');
 
 const submissionsTableBody = document.getElementById('submissions-table-body');
 
@@ -51,8 +49,6 @@ let currentSubscribersUnsubscribe = null;
 let previousWinnerId = null;
 let registeredTeamsMap = {};
 let activeSubmissionsMap = {};
-
-const OPTION_LABELS = ['A', 'B', 'C', 'D'];
 
 function init() {
   checkAdminAuth();
@@ -112,8 +108,7 @@ function setupEventListeners() {
     btnStartQuestion.addEventListener('click', async () => {
       await startQuestion({
         id: `round_${roundCount}`,
-        number: roundCount,
-        options: ['Option A', 'Option B', 'Option C', 'Option D']
+        number: roundCount
       });
     });
   }
@@ -121,11 +116,9 @@ function setupEventListeners() {
   if (btnResetQuestion) {
     btnResetQuestion.addEventListener('click', async () => {
       roundCount++;
-      if (adminRoundCounter) adminRoundCounter.textContent = `ROUND #${roundCount}`;
       await resetQuestion({
         id: `round_${roundCount}`,
-        number: roundCount,
-        options: ['Option A', 'Option B', 'Option C', 'Option D']
+        number: roundCount
       });
     });
   }
@@ -151,35 +144,26 @@ function subscribeToQuizState() {
 }
 
 function updateAdminUI(state) {
-  const { status, winner, currentQuestionId, currentQuestion } = state;
-
-  if (adminRoundCounter && currentQuestion && currentQuestion.number) {
-    roundCount = currentQuestion.number;
-    adminRoundCounter.textContent = `ROUND #${roundCount}`;
-  }
+  const { status, winner, currentQuestionId } = state;
 
   updateAdminStatusBadge(status);
 
   if (btnStartQuestion) {
     if (status === 'live') {
       btnStartQuestion.disabled = true;
-      btnStartQuestion.textContent = '▶️ OPTIONS OPEN & LIVE';
+      btnStartQuestion.textContent = '🚨 BUZZERS OPEN & LIVE';
     } else {
       btnStartQuestion.disabled = false;
-      btnStartQuestion.textContent = '▶️ OPEN OPTIONS NOW';
+      btnStartQuestion.textContent = '🚨 OPEN BUZZERS NOW';
     }
   }
 
   if (winner && (status === 'winner_selected' || status === 'locked')) {
-    const optLabel = OPTION_LABELS[winner.selectedOptionIndex] || `Option ${winner.selectedOptionIndex + 1}`;
-    
     if (adminWinnerBanner) adminWinnerBanner.style.display = 'block';
     if (adminWinnerTeam) adminWinnerTeam.textContent = winner.teamName || 'Unknown Team';
     if (adminWinnerTime) adminWinnerTime.textContent = `${((winner.timeTakenMs || 0) / 1000).toFixed(2)}s`;
-    if (adminWinnerOption) adminWinnerOption.textContent = `Option ${optLabel}`;
 
     if (adminWinnerCallout) adminWinnerCallout.textContent = winner.teamName || 'Team';
-    if (adminWinnerOptCallout) adminWinnerOptCallout.textContent = `Option ${optLabel}`;
 
     if (previousWinnerId !== winner.teamId) {
       previousWinnerId = winner.teamId;
@@ -214,7 +198,7 @@ function updateAdminStatusBadge(status) {
       break;
     case 'live':
       adminStatusBadge.classList.add('badge-live');
-      adminStatusText.textContent = 'OPTIONS LIVE!';
+      adminStatusText.textContent = 'BUZZERS OPEN';
       break;
     case 'winner_selected':
       adminStatusBadge.classList.add('badge-winner');
@@ -251,29 +235,22 @@ function renderTeamsRoster() {
 
   teams.forEach((t) => {
     const isWinner = t.teamId === winnerTeamId;
-    const teamSub = activeSubmissionsMap[t.teamId];
-    const hasClicked = Boolean(teamSub);
+    const hasBuzzed = Boolean(activeSubmissionsMap[t.teamId]);
 
     let extraClass = '';
-    let optBadge = '';
     if (isWinner) {
       extraClass = 'winner-chip';
-    } else if (hasClicked) {
+    } else if (hasBuzzed) {
       extraClass = 'buzzed';
-    }
-
-    if (teamSub && teamSub.optionIndex !== undefined) {
-      const label = OPTION_LABELS[teamSub.optionIndex] || teamSub.optionIndex + 1;
-      optBadge = ` [Opt ${label}]`;
     }
 
     const chip = document.createElement('div');
     chip.className = `team-chip ${t.online ? 'online' : ''} ${extraClass}`;
 
-    const icon = isWinner ? '👑 ' : (hasClicked ? '🎯 ' : '');
+    const icon = isWinner ? '👑 ' : (hasBuzzed ? '⚡ ' : '');
     chip.innerHTML = `
       <span class="online-dot"></span>
-      <span>${icon}${escapeHtml(t.teamName || t.teamId)}${optBadge}</span>
+      <span>${icon}${escapeHtml(t.teamName || t.teamId)}</span>
     `;
 
     adminTeamsList.appendChild(chip);
@@ -288,8 +265,8 @@ function renderSubmissionsTable(submissionsMap, winnerTeamId) {
   if (subs.length === 0) {
     submissionsTableBody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 1.5rem 0;">
-          Waiting for team responses...
+        <td colspan="3" style="text-align: center; color: var(--text-dim); padding: 1.5rem 0;">
+          Waiting for team buzzes...
         </td>
       </tr>
     `;
@@ -306,14 +283,11 @@ function renderSubmissionsTable(submissionsMap, winnerTeamId) {
     }
 
     const rankDisplay = isWinner ? '🥇 1st (WINNER)' : `#${idx + 1}`;
-    const optLabel = OPTION_LABELS[s.optionIndex] || s.optionIndex + 1;
-    const optionDisplay = `Option ${optLabel}`;
     const timeDisplay = `${((s.timeTakenMs || 0) / 1000).toFixed(2)}s`;
 
     tr.innerHTML = `
       <td>${rankDisplay}</td>
       <td><strong>${escapeHtml(s.teamName || s.teamId)}</strong></td>
-      <td><span class="status-badge badge-waiting" style="font-size:0.75rem;">${optionDisplay}</span></td>
       <td><code>${timeDisplay}</code></td>
     `;
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Host Control Center | Stage Quiz Arena</title>
-  <meta name="description" content="Host control panel for stage quiz competition. 4-Option real-time response tracker and atomic winner determination.">
+  <title>Host Control Center | Stage Buzzer System</title>
+  <meta name="description" content="Host control panel for stage buzzer competitions. Realtime team tracking and sub-millisecond winner highlighting.">
   <link rel="stylesheet" href="./style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -15,7 +15,7 @@
   <header class="app-header">
     <a href="./index.html" class="brand-logo">
       <div class="brand-icon">👑</div>
-      <span>QUIZ ARENA <span style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 600; padding: 2px 8px; background: rgba(251,191,36,0.15); border-radius: 12px; margin-left: 6px;">HOST ADMIN</span></span>
+      <span>STAGE BUZZER <span style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 600; padding: 2px 8px; background: rgba(251,191,36,0.15); border-radius: 12px; margin-left: 6px;">HOST ADMIN</span></span>
     </a>
 
     <div style="display: flex; align-items: center; gap: 1rem;">
@@ -39,7 +39,7 @@
       <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔐</div>
       <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem;">Host Authentication</h2>
       <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-        Enter administrator credentials to access the quiz control dashboard.
+        Enter administrator credentials to access the buzzer control dashboard.
       </p>
 
       <form id="admin-login-form">
@@ -63,11 +63,11 @@
     <!-- MAIN ADMIN DASHBOARD -->
     <div id="admin-dashboard-container" style="display: none;">
 
-      <!-- Top Stats Bar (Round Counter Removed) -->
+      <!-- Top Stats Bar -->
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem;" class="glass-panel">
         <div style="display: flex; align-items: center; gap: 1.5rem;">
           <div>
-            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block;">Stage Status</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block;">Buzzer Status</span>
             <div id="admin-status-badge" class="status-badge badge-waiting" style="margin-top: 4px;">
               <span class="dot"></span>
               <span id="admin-status-text">Waiting...</span>
@@ -92,29 +92,28 @@
           <!-- WINNER HERO HIGHLIGHT BANNER -->
           <div id="admin-winner-banner" class="winner-hero" style="display: none; margin-bottom: 1.5rem;">
             <span class="winner-crown">👑</span>
-            <div class="winner-title">FIRST TEAM TO SELECT AN OPTION!</div>
+            <div class="winner-title">FIRST TEAM TO BUZZ!</div>
             <div class="winner-team-name" id="admin-winner-team">Team 7</div>
             <div class="winner-details">
               <span>⚡ Reaction Time: <strong id="admin-winner-time">0.42s</strong></span>
-              <span>🎯 Selected: <strong id="admin-winner-option">Option B</strong></span>
             </div>
             <div style="margin-top: 1.25rem; font-size: 1.1rem; color: #fef08a; font-weight: 700;">
-              📢 Host: Call on <u id="admin-winner-callout">Team 7</u> who picked <u id="admin-winner-opt-callout">Option B</u>!
+              📢 Host: Ask <u id="admin-winner-callout">Team 7</u> for their answer out loud!
             </div>
           </div>
 
           <!-- PRIMARY STAGE CONTROL CARD -->
           <div class="glass-card">
             <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;">
-              Stage Quiz Controls
+              Stage Control Center
             </h2>
             <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
-              Ask your question out loud on stage, then click <strong>OPEN OPTIONS NOW</strong>. The first team to tap an option will be highlighted above. Click <strong>RESET / NEXT QUESTION</strong> to clear for the next question.
+              Click <strong>OPEN BUZZERS NOW</strong> to activate team buzzers. The first team to tap will be highlighted above. Click <strong>RESET / NEXT QUESTION</strong> to clear for the next round.
             </p>
 
             <div class="control-bar">
-              <button id="btn-start-question" class="btn btn-success btn-lg" style="flex: 1; padding: 1.25rem; font-size: 1.3rem;">
-                ▶️ OPEN OPTIONS NOW
+              <button id="btn-start-question" class="btn btn-danger btn-lg" style="flex: 1; padding: 1.25rem; font-size: 1.3rem;">
+                🚨 OPEN BUZZERS NOW
               </button>
               <button id="btn-reset-question" class="btn btn-warning btn-lg" style="flex: 1; padding: 1.25rem; font-size: 1.3rem;">
                 🔄 RESET / NEXT QUESTION
@@ -124,13 +123,13 @@
 
         </div>
 
-        <!-- Right Column: Registered Teams & Live Reaction Log -->
+        <!-- Right Column: Registered Teams & Live Buzz Log -->
         <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
           <!-- Registered Teams Roster -->
           <div class="glass-card" style="padding: 1.5rem;">
             <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-              <span>🌐 Registered Teams</span>
+              <span>🌐 Registered / Connected Teams</span>
               <span id="teams-count-badge" style="font-size: 0.85rem; color: var(--accent-cyan); background: rgba(6,182,212,0.15); padding: 2px 10px; border-radius: 12px;">0 Online</span>
             </h3>
 
@@ -139,7 +138,7 @@
             </div>
           </div>
 
-          <!-- Live Chronological Reaction Feed -->
+          <!-- Live Chronological Buzz Feed -->
           <div class="glass-card" style="padding: 1.5rem; flex: 1;">
             <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
               <span>⚡ Live Reaction Feed</span>
@@ -152,14 +151,13 @@
                   <tr>
                     <th>Rank</th>
                     <th>Team</th>
-                    <th>Choice</th>
-                    <th>Time</th>
+                    <th>Reaction Time</th>
                   </tr>
                 </thead>
                 <tbody id="submissions-table-body">
                   <tr>
-                    <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 1.5rem 0;">
-                      Waiting for team responses...
+                    <td colspan="3" style="text-align: center; color: var(--text-dim); padding: 1.5rem 0;">
+                      Waiting for team buzzes...
                     </td>
                   </tr>
                 </tbody>
