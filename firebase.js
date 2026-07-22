@@ -1,6 +1,6 @@
 /**
  * HYBRID REALTIME ENGINE WRAPPER (FIREBASE + WEBRTC + WEBSOCKET + LOCAL SYNC)
- * Supports Admin Team Deletion & Clear All Teams.
+ * Supports Admin Team Deletion, Clear All Teams, and Lock End state.
  */
 
 import {
@@ -14,6 +14,7 @@ import {
   clearAllPeerTeams,
   submitPeerAnswer,
   startPeerQuestion,
+  endPeerQuestion,
   resetPeerQuestion
 } from './peer-engine.js';
 
@@ -25,6 +26,7 @@ import {
   registerWsTeamPresence,
   submitWsTeamAnswer,
   startWsQuestion,
+  endWsQuestion,
   resetWsQuestion
 } from './websocket.js';
 
@@ -114,7 +116,7 @@ class LocalMockDatabase {
   }
 
   notifyAll() {
-    this.listeners.forEach((callbacks) => {
+    this.listeners.forEach((callbacks, path) => {
       callbacks.forEach((cb) => cb(this.getValueAtPath(path)));
     });
   }
@@ -296,6 +298,8 @@ export async function startQuestion(questionData) {
 }
 
 export async function endQuestion() {
+  endPeerQuestion();
+
   if (isFirebaseConfigured && db) {
     await update(ref(db, "quizState"), { status: "locked" });
   } else if (isWsServerMode) {

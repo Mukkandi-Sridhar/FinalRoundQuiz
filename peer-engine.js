@@ -1,6 +1,6 @@
 /**
  * ZERO-REFRESH WEBRTC REALTIME ENGINE (PEERJS CLOUD MESH)
- * Supports team removal and roster clearing.
+ * Supports team removal, roster clearing, and lock end state.
  */
 
 const HOST_PEER_ID = 'quiz_arena_stage_master_v1';
@@ -44,7 +44,7 @@ export function initPeerEngine(isHost = false) {
         }
       });
 
-      peer.on('open', (id) => {
+      peer.on('open', () => {
         isConnected = true;
         notifyConn(true);
       });
@@ -340,6 +340,11 @@ export async function startPeerQuestion(qData) {
     questionStartTime: Date.now(),
     winner: null
   };
+  broadcastHostState();
+}
+
+export async function endPeerQuestion() {
+  localQuizState.status = 'locked';
   broadcastHostState();
 }
 
