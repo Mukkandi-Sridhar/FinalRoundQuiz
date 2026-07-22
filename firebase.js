@@ -1,24 +1,29 @@
 /**
- * HYBRID REALTIME ENGINE WRAPPER (FIREBASE + GITHUB PAGES + WEBSOCKET + LOCAL SYNC)
- * Supports GitHub Pages deployment out-of-the-box!
- * 
- * When deployed on GitHub Pages (github.io):
- * - If Firebase credentials are set below -> Uses Firebase Realtime Database (Sub-ms Cloud Atomic Sync across 20+ teams).
- * - If Firebase credentials are not set yet -> Uses Multi-Tab Local Sync & shows GitHub Pages setup guide banner.
+ * HYBRID REALTIME ENGINE WRAPPER (FIREBASE + WEBRTC + WEBSOCKET + LOCAL SYNC)
+ * Provides 100% Zero-Refresh Live Realtime Synchronization across all devices globally!
  */
+
+import {
+  initPeerEngine,
+  subscribePeerConn,
+  subscribePeerState,
+  subscribePeerTeams,
+  subscribePeerSubmissions,
+  registerPeerTeam,
+  submitPeerAnswer,
+  startPeerQuestion,
+  resetPeerQuestion
+} from './peer-engine.js';
 
 import {
   subscribeWsConnection,
   subscribeWsQuizState,
   subscribeWsTeams,
   subscribeWsSubmissions,
-  subscribeWsQuestionBank,
   registerWsTeamPresence,
   submitWsTeamAnswer,
   startWsQuestion,
-  endWsQuestion,
-  resetWsQuestion,
-  saveWsQuestionBank
+  resetWsQuestion
 } from './websocket.js';
 
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -35,10 +40,7 @@ import {
   remove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// ==========================================
 // FIREBASE CONFIGURATION
-// Replace the values below with your Firebase project credentials.
-// ==========================================
 export const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -55,6 +57,7 @@ export const isFirebaseConfigured = Boolean(
 );
 
 const isGitHubPages = window.location.hostname.includes('github.io');
+const isHostPage = window.location.pathname.includes('admin.html');
 
 let app = null;
 let db = null;
@@ -63,24 +66,19 @@ if (isFirebaseConfigured) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     db = getDatabase(app);
-    console.log("🔥 Connected to Firebase Realtime Database Cloud!");
   } catch (err) {
-    console.warn("Firebase initialization warning:", err);
+    console.warn("Firebase warning:", err);
   }
-} else if (isGitHubPages) {
-  console.info(
-    "%c[GITHUB PAGES DEPLOYMENT NOTICE] Please add your Firebase databaseURL to firebase.js so 20+ remote devices can connect live across different networks!",
-    "background: #f59e0b; color: #000; padding: 6px 12px; font-weight: bold; border-radius: 4px;"
-  );
 }
 
-// Check if native Node WebSocket server is running locally
-let isWsServerMode = false;
-if (!isFirebaseConfigured && !isGitHubPages && window.location.protocol.startsWith('http')) {
-  isWsServerMode = true;
+// Auto-initialize PeerJS WebRTC Engine if Firebase not set
+if (!isFirebaseConfigured) {
+  initPeerEngine(isHostPage);
 }
 
-// Fallback Local Sync Engine
+const isWsServerMode = !isFirebaseConfigured && !isGitHubPages && window.location.protocol.startsWith('http');
+
+// Local Fallback
 class LocalMockDatabase {
   constructor() {
     this.channel = new BroadcastChannel("live_quiz_sync_channel");
@@ -89,7 +87,7 @@ class LocalMockDatabase {
       this.data = {
         quizState: {
           status: "waiting",
-          currentQuestionId: "q1",
+          currentQuestionId: "round_1",
           questionStartTime: Date.now(),
           winner: null
         },
@@ -153,7 +151,7 @@ class LocalMockDatabase {
 const mockDb = (!isFirebaseConfigured && !isWsServerMode) ? new LocalMockDatabase() : null;
 
 // ==========================================
-// UNIFIED ABSTRACT ENGINE APIS
+// UNIFIED ENGINE SUBSCRIPTIONS
 // ==========================================
 
 export function subscribeConnectionStatus(callback) {
@@ -162,14 +160,14 @@ export function subscribeConnectionStatus(callback) {
   } else if (isWsServerMode) {
     return subscribeWsConnection(callback);
   } else {
-    callback(true);
-    window.addEventListener("online", () => callback(true));
-    window.addEventListener("offline", () => callback(false));
+    return subscribePeerConn(callback);
   }
 }
 
 export function registerTeamPresence(teamId, teamName) {
   if (!teamId) return;
+
+  registerPeerTeam(teamId, teamName);
 
   if (isFirebaseConfigured && db) {
     const teamRef = ref(db, `teams/${teamId}`);
@@ -189,8 +187,8 @@ export function subscribeQuizState(callback) {
     onValue(ref(db, "quizState"), (snap) => callback(snap.val() || {}));
   } else if (isWsServerMode) {
     return subscribeWsQuizState(callback);
-  } else if (mockDb) {
-    return mockDb.subscribe("quizState", callback);
+  } else {
+    return subscribePeerState(callback);
   }
 }
 
@@ -199,8 +197,8 @@ export function subscribeTeams(callback) {
     onValue(ref(db, "teams"), (snap) => callback(snap.val() || {}));
   } else if (isWsServerMode) {
     return subscribeWsTeams(callback);
-  } else if (mockDb) {
-    return mockDb.subscribe("teams", callback);
+  } else {
+    return subscribePeerTeams(callback);
   }
 }
 
@@ -211,12 +209,14 @@ export function subscribeSubmissions(questionId, callback) {
     onValue(ref(db, `submissions/${questionId}`), (snap) => callback(snap.val() || {}));
   } else if (isWsServerMode) {
     return subscribeWsSubmissions(questionId, callback);
-  } else if (mockDb) {
-    return mockDb.subscribe(`submissions/${questionId}`, callback);
+  } else {
+    return subscribePeerSubmissions(questionId, callback);
   }
 }
 
 export async function submitTeamAnswer(questionId, teamId, teamName, optionIndex, optionText, timeTakenMs) {
+  submitPeerAnswer(questionId, teamId, teamName, optionIndex, optionText, timeTakenMs);
+
   if (isFirebaseConfigured && db) {
     const record = { teamId, teamName, optionIndex, optionText, timestamp: serverTimestamp(), timeTakenMs };
     await set(ref(db, `submissions/${questionId}/${teamId}`), record);
@@ -251,6 +251,8 @@ export async function submitTeamAnswer(questionId, teamId, teamName, optionIndex
 }
 
 export async function startQuestion(questionData) {
+  startPeerQuestion(questionData);
+
   if (isFirebaseConfigured && db) {
     await set(ref(db, "quizState"), {
       status: "live",
@@ -285,6 +287,8 @@ export async function endQuestion() {
 }
 
 export async function resetQuestion(questionData = null) {
+  resetPeerQuestion(questionData);
+
   if (isFirebaseConfigured && db) {
     const quizStateRef = ref(db, "quizState");
     const snapshot = await get(quizStateRef);
@@ -294,7 +298,7 @@ export async function resetQuestion(questionData = null) {
     if (target?.id) await remove(ref(db, `submissions/${target.id}`));
     await set(quizStateRef, {
       status: "waiting",
-      currentQuestionId: target?.id || "q1",
+      currentQuestionId: target?.id || "round_1",
       currentQuestion: target,
       questionStartTime: null,
       winner: null
@@ -307,7 +311,7 @@ export async function resetQuestion(questionData = null) {
     if (target?.id) mockDb.setValueAtPath(`submissions/${target.id}`, {});
     mockDb.setValueAtPath("quizState", {
       status: "waiting",
-      currentQuestionId: target?.id || "q1",
+      currentQuestionId: target?.id || "round_1",
       currentQuestion: target,
       questionStartTime: null,
       winner: null
@@ -318,19 +322,13 @@ export async function resetQuestion(questionData = null) {
 export async function saveQuestionBank(questionsList) {
   if (isFirebaseConfigured && db) {
     await set(ref(db, "questions"), questionsList);
-  } else if (isWsServerMode) {
-    return saveWsQuestionBank(questionsList);
-  } else if (mockDb) {
-    mockDb.setValueAtPath("questions", questionsList);
   }
 }
 
 export function subscribeQuestionBank(callback) {
   if (isFirebaseConfigured && db) {
     onValue(ref(db, "questions"), (snap) => callback(snap.val() || []));
-  } else if (isWsServerMode) {
-    return subscribeWsQuestionBank(callback);
-  } else if (mockDb) {
-    return mockDb.subscribe("questions", callback);
+  } else {
+    callback([]);
   }
 }
