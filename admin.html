@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Control Center | Live Quiz Arena</title>
+  <meta name="description" content="Host and monitor live quiz competitions with real-time atomic winner locks.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">👑</div>
+      <span>QUIZ ARENA <span style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 600; padding: 2px 8px; background: rgba(251,191,36,0.15); border-radius: 12px; margin-left: 6px;">ADMIN</span></span>
+    </a>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div id="admin-session-badge" style="display: none; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 0.4rem 0.9rem; border-radius: var(--radius-pill); font-weight: 700; font-family: var(--font-heading);">
+        <span style="color: var(--accent-cyan);">🛡️ Host Active</span>
+        <button id="btn-admin-logout" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.85rem; font-weight: 700; margin-left: 6px;">Logout</button>
+      </div>
+
+      <div class="status-badge badge-waiting" id="admin-connection-badge">
+        <span class="dot"></span>
+        <span id="admin-conn-text">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="admin-login-card" class="glass-card" style="max-width: 440px; margin: 3rem auto; text-align: center;">
+      <div style="font-size: 3.5rem; margin-bottom: 1rem;">🔐</div>
+      <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem;">Host Authentication</h2>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+        Enter administrator credentials to access the quiz control dashboard.
+      </p>
+
+      <form id="admin-login-form">
+        <div class="form-group">
+          <label class="form-label" for="admin-user-input">Username</label>
+          <input type="text" id="admin-user-input" class="glass-input" value="admin" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="admin-pass-input">Password</label>
+          <input type="password" id="admin-pass-input" class="glass-input" value="admin123" required>
+        </div>
+        <div id="admin-auth-error" style="color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; display: none;">
+          ❌ Invalid username or password!
+        </div>
+        <button type="submit" class="btn btn-warning btn-lg" style="width: 100%;">
+          🔓 Access Control Panel
+        </button>
+      </form>
+    </div>
+
+    <!-- MAIN ADMIN DASHBOARD -->
+    <div id="admin-dashboard-container" style="display: none;">
+
+      <!-- Top Stats Bar -->
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem;" class="glass-panel">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block;">Quiz State</span>
+            <div id="admin-status-badge" class="status-badge badge-waiting" style="margin-top: 4px;">
+              <span class="dot"></span>
+              <span id="admin-status-text">Waiting...</span>
+            </div>
+          </div>
+          <div style="width: 1px; height: 35px; background: rgba(255,255,255,0.1);"></div>
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block;">Connected Teams</span>
+            <div style="font-family: var(--font-heading); font-size: 1.4rem; font-weight: 800; color: var(--success);" id="online-team-count">
+              0 Online
+            </div>
+          </div>
+        </div>
+
+        <!-- Question Selector Dropdown -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label for="question-select" style="font-family: var(--font-heading); font-size: 0.9rem; font-weight: 700; color: var(--text-muted);">Question Bank:</label>
+          <select id="question-select" class="glass-input" style="width: auto; padding: 0.5rem 1rem; font-weight: 600;">
+            <!-- Dynamic list of questions -->
+          </select>
+          <button id="btn-add-custom-q" class="btn btn-outline" style="padding: 0.55rem 1rem;" title="Add Custom Question">➕ Custom</button>
+        </div>
+      </div>
+
+      <!-- Main Admin Grid Layout -->
+      <div class="admin-grid">
+
+        <!-- Left Column: Current Question & Live Winner Panel -->
+        <div>
+
+          <!-- WINNER HERO DISPLAY (Shown when a team wins) -->
+          <div id="admin-winner-banner" class="winner-hero" style="display: none; margin-bottom: 1.5rem;">
+            <span class="winner-crown">👑</span>
+            <div class="winner-title">FASTEST TEAM DECLARED!</div>
+            <div class="winner-team-name" id="admin-winner-team">Team 7</div>
+            <div class="winner-details">
+              <span>⚡ Time: <strong id="admin-winner-time">0.00s</strong></span>
+              <span>🎯 Selected: <strong id="admin-winner-option">Option A</strong></span>
+            </div>
+            <div style="margin-top: 1.25rem; font-size: 0.95rem; color: #fef08a;">
+              📢 Host: Call on <strong id="admin-winner-callout">Team 7</strong> to answer out loud!
+            </div>
+          </div>
+
+          <!-- Current Active Question Display Card -->
+          <div class="glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <span style="font-family: var(--font-heading); font-weight: 800; color: var(--accent-cyan); font-size: 1.1rem;" id="admin-q-number">
+                QUESTION #1
+              </span>
+              <div class="timer-display" id="admin-timer-display">30s</div>
+            </div>
+
+            <!-- Question Text -->
+            <h2 id="admin-q-text" style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 700; line-height: 1.4; margin-bottom: 1.5rem;">
+              Loading Question...
+            </h2>
+
+            <!-- 4 Options Grid -->
+            <div class="options-grid" id="admin-options-preview" style="margin-bottom: 2rem;">
+              <!-- Option Cards -->
+            </div>
+
+            <!-- ACTION CONTROL BAR -->
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+              <div style="font-family: var(--font-heading); font-size: 0.9rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                Quiz Lifecycle Controls
+              </div>
+
+              <div class="control-bar">
+                <button id="btn-start-question" class="btn btn-success btn-lg">
+                  ▶️ START QUESTION
+                </button>
+                <button id="btn-end-question" class="btn btn-danger btn-lg" disabled>
+                  🛑 END QUESTION
+                </button>
+                <button id="btn-reset-question" class="btn btn-warning btn-lg">
+                  🔄 RESET QUESTION
+                </button>
+                <button id="btn-next-question" class="btn btn-primary btn-lg">
+                  ⏭️ NEXT QUESTION
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Right Column: Submissions Log & Live Teams Roster -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+          <!-- Connected Teams Panel -->
+          <div class="glass-card" style="padding: 1.5rem;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+              <span>🌐 Connected Teams</span>
+              <span id="teams-count-badge" style="font-size: 0.85rem; color: var(--accent-cyan); background: rgba(6,182,212,0.15); padding: 2px 10px; border-radius: 12px;">0 Online</span>
+            </h3>
+
+            <div class="teams-chip-container" id="admin-teams-list">
+              <span style="font-size: 0.85rem; color: var(--text-dim);">No teams connected yet...</span>
+            </div>
+          </div>
+
+          <!-- Live Submission Feed -->
+          <div class="glass-card" style="padding: 1.5rem; flex: 1;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.1rem; font-weight: 800; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+              <span>⚡ Live Submission Log</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Millisecond Precision</span>
+            </h3>
+
+            <div style="max-height: 340px; overflow-y: auto;">
+              <table class="submissions-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Team</th>
+                    <th>Choice</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="submissions-table-body">
+                  <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-dim); padding: 1.5rem 0;">
+                      Waiting for team responses...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- MODAL: ADD CUSTOM QUESTION -->
+    <div id="modal-custom-q" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="glass-card" style="width: 100%; max-width: 550px; margin: 1rem;">
+        <h3 style="font-family: var(--font-heading); font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem;">Create Custom Question</h3>
+        
+        <form id="custom-q-form">
+          <div class="form-group">
+            <label class="form-label" for="custom-q-text">Question Text</label>
+            <input type="text" id="custom-q-text" class="glass-input" placeholder="Enter question..." required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="custom-opt-1">Option A</label>
+            <input type="text" id="custom-opt-1" class="glass-input" placeholder="Option 1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="custom-opt-2">Option B</label>
+            <input type="text" id="custom-opt-2" class="glass-input" placeholder="Option 2" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="custom-opt-3">Option C</label>
+            <input type="text" id="custom-opt-3" class="glass-input" placeholder="Option 3" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="custom-opt-4">Option D</label>
+            <input type="text" id="custom-opt-4" class="glass-input" placeholder="Option 4" required>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+            <button type="submit" class="btn btn-success" style="flex: 1;">Save & Select</button>
+            <button type="button" id="btn-close-modal" class="btn btn-outline" style="flex: 1;">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

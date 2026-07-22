@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Quiz Arena | Real-Time Competition Portal</title>
+  <meta name="description" content="Ultra-fast, low-latency live quiz competition platform with sub-millisecond atomic winner determination.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <a href="index.html" class="brand-logo">
+      <div class="brand-icon">⚡</div>
+      <span>QUIZ ARENA <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600; padding: 2px 8px; background: rgba(6,182,212,0.15); border-radius: 12px; margin-left: 6px;">REALTIME</span></span>
+    </a>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div class="status-badge badge-waiting" id="portal-connection-badge">
+        <span class="dot"></span>
+        <span id="portal-conn-text">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container" style="max-width: 1100px; padding-top: 3rem;">
+
+    <!-- Hero Banner -->
+    <div style="text-align: center; margin-bottom: 3.5rem;">
+      <h1 style="font-family: var(--font-heading); font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #ffffff 0%, #818cf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1rem;">
+        Sub-Millisecond Live Quiz Platform
+      </h1>
+      <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 680px; margin: 0 auto; line-height: 1.6;">
+        Designed for high-speed live stage competitions with 20+ simultaneous teams. The first team to respond is declared winner instantly with atomic transaction precision.
+      </p>
+    </div>
+
+    <!-- Login Selection Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-bottom: 3.5rem;">
+      
+      <!-- Team Card -->
+      <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--primary);">
+        <div>
+          <div style="width: 50px; height: 50px; background: rgba(99,102,241,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1.25rem; color: var(--primary);">
+            👥
+          </div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; margin-bottom: 0.75rem;">
+            Team Participant Login
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Enter your team name or number to join the live session. Once joined, your device becomes your instant response buzzer.
+          </p>
+        </div>
+
+        <form id="landing-team-form" style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="landing-team-name">Team Name or Number</label>
+            <input type="text" id="landing-team-name" class="glass-input" placeholder="e.g. Team 7 or Team Phoenix" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+            🚀 Enter Competition
+          </button>
+        </form>
+      </div>
+
+      <!-- Admin Card -->
+      <div class="glass-card" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--accent-gold);">
+        <div>
+          <div style="width: 50px; height: 50px; background: rgba(251,191,36,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1.25rem; color: var(--accent-gold);">
+            👑
+          </div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; margin-bottom: 0.75rem;">
+            Admin Control Center
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Host the live quiz, push questions in real-time, view live team rosters, monitor millisecond buzz logs, and manage winner locks.
+          </p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="background: rgba(15,23,42,0.6); padding: 0.85rem; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--text-muted);">
+            💡 Default Credentials:<br>
+            <strong style="color: var(--text-main);">Username:</strong> admin | <strong style="color: var(--text-main);">Password:</strong> admin123
+          </div>
+          <a href="admin.html" class="btn btn-warning btn-lg" style="width: 100%;">
+            ⚙️ Open Admin Panel
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Features & System Overview Footer -->
+    <div class="glass-panel" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; text-align: center;">
+      <div>
+        <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">⚡</div>
+        <div style="font-family: var(--font-heading); font-weight: 700; margin-bottom: 0.25rem;">Zero Polling</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Real-time Firebase push notifications</div>
+      </div>
+      <div>
+        <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">🔒</div>
+        <div style="font-family: var(--font-heading); font-weight: 700; margin-bottom: 0.25rem;">Atomic Winner Lock</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Prevents race conditions using server transactions</div>
+      </div>
+      <div>
+        <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">📱</div>
+        <div style="font-family: var(--font-heading); font-weight: 700; margin-bottom: 0.25rem;">Multi-Device Support</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Optimized for laptops, phones & projectors</div>
+      </div>
+      <div>
+        <div style="font-size: 1.8rem; margin-bottom: 0.25rem;">🛡️</div>
+        <div style="font-family: var(--font-heading); font-weight: 700; margin-bottom: 0.25rem;">Refresh Protection</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Prevents double answers & back-button tricks</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { subscribeConnectionStatus } from './firebase.js';
+
+    // Update connection status on landing page
+    subscribeConnectionStatus((isConnected) => {
+      const badge = document.getElementById('portal-connection-badge');
+      const text = document.getElementById('portal-conn-text');
+      if (isConnected) {
+        badge.className = 'status-badge badge-live';
+        text.textContent = 'Engine Ready';
+      } else {
+        badge.className = 'status-badge badge-locked';
+        text.textContent = 'Disconnected';
+      }
+    });
+
+    // Handle Team submission from landing
+    const teamForm = document.getElementById('landing-team-form');
+    const teamInput = document.getElementById('landing-team-name');
+
+    teamForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = teamInput.value.trim();
+      if (val) {
+        // Save to localStorage and redirect to team page
+        localStorage.setItem('quiz_team_name', val);
+        const teamId = 'team_' + val.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        localStorage.setItem('quiz_team_id', teamId);
+        window.location.href = 'team.html';
+      }
+    });
+
+    // Pre-fill team name if already logged in
+    const existingName = localStorage.getItem('quiz_team_name');
+    if (existingName) {
+      teamInput.value = existingName;
+    }
+  </script>
+
+</body>
+</html>

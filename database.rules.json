@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": true,
+    "quizState": {
+      ".write": true,
+      "winner": {
+        // Enforce Atomic Rule: A winner can only be written if it does not exist yet (data.val() === null)
+        ".write": "!data.exists() || !newData.exists()"
+      }
+    },
+    "submissions": {
+      "$questionId": {
+        "$teamId": {
+          // A team can write their own submission once per question
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['teamId', 'teamName', 'optionIndex', 'timestamp'])"
+        }
+      }
+    },
+    "teams": {
+      "$teamId": {
+        // Teams can update their presence state
+        ".write": true
+      }
+    },
+    "questions": {
+      ".write": true
+    }
+  }
+}
