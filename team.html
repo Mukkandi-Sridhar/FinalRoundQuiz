@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Team Buzzer | Live Stage Competition</title>
-  <meta name="description" content="Ultra-fast stage buzzer for live competitions. Single tap atomic first response engine.">
+  <title>Team Response | Live Stage Competition</title>
+  <meta name="description" content="Ultra-fast stage quiz response screen. 4 large touch options with sub-millisecond atomic winner determination.">
   <link rel="stylesheet" href="./style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚨</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
 </head>
 <body>
 
   <!-- Header -->
   <header class="app-header">
     <a href="./index.html" class="brand-logo">
-      <div class="brand-icon">🚨</div>
-      <span>STAGE BUZZER <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600; padding: 2px 8px; background: rgba(6,182,212,0.15); border-radius: 12px; margin-left: 6px;">LIVE</span></span>
+      <div class="brand-icon">🎯</div>
+      <span>QUIZ ARENA <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 600; padding: 2px 8px; background: rgba(6,182,212,0.15); border-radius: 12px; margin-left: 6px;">TEAM</span></span>
     </a>
 
     <div style="display: flex; align-items: center; gap: 1rem;">
@@ -32,14 +32,14 @@
   </header>
 
   <!-- Main Container -->
-  <main class="main-container" style="max-width: 650px; padding-top: 2rem;">
+  <main class="main-container" style="max-width: 800px; padding-top: 2rem;">
 
     <!-- TEAM LOGIN FORM -->
-    <div id="team-login-container" class="glass-card" style="text-align: center;">
+    <div id="team-login-container" class="glass-card" style="max-width: 500px; margin: 0 auto; text-align: center;">
       <div style="font-size: 3.5rem; margin-bottom: 1rem;">🚀</div>
       <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem;">Join Competition</h2>
       <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
-        Enter your Team Name or Number to register your device as an instant live buzzer.
+        Enter your Team Name or Number to connect your device.
       </p>
 
       <form id="team-login-form">
@@ -48,18 +48,18 @@
           <input type="text" id="team-name-input" class="glass-input" placeholder="e.g. Team 1, Team Alpha, Phoenix" required autocomplete="off" autofocus>
         </div>
         <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
-          ⚡ Connect Buzzer
+          ⚡ Connect Device
         </button>
       </form>
     </div>
 
-    <!-- MAIN BUZZER ARENA VIEW -->
+    <!-- MAIN 4-OPTION ARENA VIEW -->
     <div id="quiz-arena-container" style="display: none;">
 
       <!-- Status Header -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <span style="font-family: var(--font-heading); font-weight: 800; font-size: 1.2rem; color: var(--text-muted);" id="round-num-tag">
-          ROUND READY
+          ROUND #1
         </span>
         <div id="live-quiz-status-badge" class="status-badge badge-waiting">
           <span class="dot"></span>
@@ -67,34 +67,56 @@
         </div>
       </div>
 
-      <!-- WINNER ANNOUNCEMENT HERO CARD -->
-      <div id="view-winner-hero" class="winner-hero" style="display: none; margin-bottom: 2rem;">
+      <!-- WINNER HERO ANNOUNCEMENT CARD -->
+      <div id="view-winner-hero" class="winner-hero" style="display: none; margin-bottom: 1.5rem;">
         <span class="winner-crown">👑</span>
-        <div class="winner-title">FASTEST BUZZER</div>
+        <div class="winner-title">FIRST TEAM TO SELECT</div>
         <div class="winner-team-name" id="winner-name-display">Team Alpha</div>
         <div class="winner-details">
-          <span>⚡ Reaction Time: <strong id="winner-time-display">0.42s</strong></span>
+          <span>⚡ Time: <strong id="winner-time-display">0.42s</strong></span>
+          <span>🎯 Choice: <strong id="winner-option-display">Option A</strong></span>
         </div>
         <div id="your-team-victory-tag" style="margin-top: 1.25rem; display: none; background: rgba(16,185,129,0.25); border: 2px solid var(--success); color: #ffffff; padding: 0.75rem 1.25rem; border-radius: var(--radius-pill); font-family: var(--font-heading); font-size: 1.1rem; font-weight: 900;">
           🎉 CONGRATULATIONS! YOUR TEAM WAS FIRST!
         </div>
       </div>
 
-      <!-- GIANT TOUCH BUZZER CONTAINER -->
-      <div class="glass-card" style="text-align: center; padding: 3rem 1.5rem;">
-
-        <!-- MASSIVE BUZZER BUTTON -->
-        <button id="giant-buzzer-btn" class="giant-buzzer-btn" disabled>
-          <div class="buzzer-inner">
-            <span class="buzzer-icon">⚡</span>
-            <span id="buzzer-btn-text" class="buzzer-text">WAITING...</span>
-          </div>
-        </button>
-
-        <div id="buzzer-subtext" style="margin-top: 2rem; color: var(--text-muted); font-size: 1rem; font-weight: 600;">
-          Host will open buzzers shortly. Stand by!
+      <!-- 4 OPTIONS CARD (NO QUESTION TEXT) -->
+      <div class="glass-card">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--accent-cyan); margin-bottom: 0.25rem;">
+            📢 Listen to Host for Question
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem;" id="options-instruction-text">
+            Tap your choice as soon as options open!
+          </p>
         </div>
 
+        <!-- 4 TOUCH-FRIENDLY LARGE OPTIONS -->
+        <div class="options-grid" id="options-container">
+          <button class="option-btn" data-index="0" disabled>
+            <div class="option-badge">A</div>
+            <div style="flex: 1;">Option A</div>
+          </button>
+          <button class="option-btn" data-index="1" disabled>
+            <div class="option-badge">B</div>
+            <div style="flex: 1;">Option B</div>
+          </button>
+          <button class="option-btn" data-index="2" disabled>
+            <div class="option-badge">C</div>
+            <div style="flex: 1;">Option C</div>
+          </button>
+          <button class="option-btn" data-index="3" disabled>
+            <div class="option-badge">D</div>
+            <div style="flex: 1;">Option D</div>
+          </button>
+        </div>
+
+        <div id="submission-feedback-bar" style="margin-top: 1.5rem; text-align: center; display: none;">
+          <div style="padding: 0.85rem; border-radius: var(--radius-md); background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #34d399; font-weight: 700; font-family: var(--font-heading);">
+            🔒 Response Submitted! Waiting for fastest team declaration...
+          </div>
+        </div>
       </div>
 
     </div>
