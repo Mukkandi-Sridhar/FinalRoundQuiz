@@ -1,7 +1,6 @@
 /**
  * TEAM STAGE BUZZER CONTROLLER
- * High-concurrency support: Generates unique device UUIDs to prevent name collisions
- * when 20+ teams join simultaneously across smartphones.
+ * High-concurrency mobile app support with Tab-Switching Re-Sync (Page Visibility API).
  */
 
 import {
@@ -53,6 +52,7 @@ function init() {
   loadStoredTeamIdentity();
   setupEventListeners();
   setupConnectionMonitor();
+  setupTabVisibilityReSync();
   subscribeToBuzzerState();
 }
 
@@ -120,6 +120,18 @@ function setupEventListeners() {
       handleBuzzerPress();
     });
   }
+}
+
+// Re-register presence & state sync when user switches back to this tab
+function setupTabVisibilityReSync() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentTeam.id) {
+      registerTeamPresence(currentTeam.id, currentTeam.name);
+      if (currentRoundState) {
+        renderBuzzerState(currentRoundState);
+      }
+    }
+  });
 }
 
 function setupConnectionMonitor() {

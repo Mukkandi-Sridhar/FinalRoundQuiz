@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Team Buzzer | Live Stage Competition</title>
   <meta name="description" content="Ultra-fast stage buzzer screen with sub-millisecond atomic winner determination.">
   <link rel="stylesheet" href="./style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚨</text></svg>">
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
-<body>
+<body class="team-mobile-app">
 
   <!-- Header -->
   <header class="app-header">
@@ -33,10 +33,10 @@
   </header>
 
   <!-- Main Container -->
-  <main class="main-container" style="max-width: 650px; padding-top: 2rem;">
+  <main class="main-container">
 
     <!-- TEAM LOGIN FORM -->
-    <div id="team-login-container" class="glass-card" style="text-align: center;">
+    <div id="team-login-container" class="glass-card" style="max-width: 500px; margin: 0 auto; text-align: center;">
       <div style="font-size: 3.5rem; margin-bottom: 1rem;">🚀</div>
       <h2 style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem;">Join Competition</h2>
       <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
@@ -79,7 +79,7 @@
       </div>
 
       <!-- GIANT STAGE BUZZER CARD -->
-      <div class="glass-card" style="text-align: center; padding: 3rem 1.5rem;">
+      <div class="glass-card" style="text-align: center; padding: 2.5rem 1.5rem;">
 
         <!-- GIANT STAGE BUZZER BUTTON -->
         <button id="giant-buzzer-btn" class="giant-buzzer-btn" disabled>
@@ -89,7 +89,7 @@
           </div>
         </button>
 
-        <div id="buzzer-subtext" style="margin-top: 2rem; color: var(--text-muted); font-size: 1rem; font-weight: 600;">
+        <div id="buzzer-subtext" style="margin-top: 1.5rem; color: var(--text-muted); font-size: 1rem; font-weight: 600;">
           Host will open buzzers shortly. Stand by!
         </div>
 
