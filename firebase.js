@@ -1,6 +1,6 @@
 /**
  * HYBRID REALTIME ENGINE WRAPPER (FIREBASE + WEBRTC + WEBSOCKET + LOCAL SYNC)
- * Provides 100% Zero-Refresh Live Realtime Synchronization across all devices globally!
+ * Supports Admin Team Deletion & Clear All Teams.
  */
 
 import {
@@ -10,6 +10,8 @@ import {
   subscribePeerTeams,
   subscribePeerSubmissions,
   registerPeerTeam,
+  removePeerTeam,
+  clearAllPeerTeams,
   submitPeerAnswer,
   startPeerQuestion,
   resetPeerQuestion
@@ -71,14 +73,12 @@ if (isFirebaseConfigured) {
   }
 }
 
-// Auto-initialize PeerJS WebRTC Engine if Firebase not set
 if (!isFirebaseConfigured) {
   initPeerEngine(isHostPage);
 }
 
 const isWsServerMode = !isFirebaseConfigured && !isGitHubPages && window.location.protocol.startsWith('http');
 
-// Local Fallback
 class LocalMockDatabase {
   constructor() {
     this.channel = new BroadcastChannel("live_quiz_sync_channel");
@@ -114,7 +114,7 @@ class LocalMockDatabase {
   }
 
   notifyAll() {
-    this.listeners.forEach((callbacks, path) => {
+    this.listeners.forEach((callbacks) => {
       callbacks.forEach((cb) => cb(this.getValueAtPath(path)));
     });
   }
@@ -150,10 +150,7 @@ class LocalMockDatabase {
 
 const mockDb = (!isFirebaseConfigured && !isWsServerMode) ? new LocalMockDatabase() : null;
 
-// ==========================================
 // UNIFIED ENGINE SUBSCRIPTIONS
-// ==========================================
-
 export function subscribeConnectionStatus(callback) {
   if (isFirebaseConfigured && db) {
     onValue(ref(db, ".info/connected"), (snap) => callback(snap.val() === true));
@@ -179,6 +176,30 @@ export function registerTeamPresence(teamId, teamName) {
     const current = mockDb.getValueAtPath("teams") || {};
     current[teamId] = { teamId, teamName, online: true, lastSeen: Date.now() };
     mockDb.setValueAtPath("teams", current);
+  }
+}
+
+export async function removeTeam(teamId) {
+  if (!teamId) return;
+
+  removePeerTeam(teamId);
+
+  if (isFirebaseConfigured && db) {
+    await remove(ref(db, `teams/${teamId}`));
+  } else if (mockDb) {
+    const current = mockDb.getValueAtPath("teams") || {};
+    delete current[teamId];
+    mockDb.setValueAtPath("teams", current);
+  }
+}
+
+export async function clearAllTeams() {
+  clearAllPeerTeams();
+
+  if (isFirebaseConfigured && db) {
+    await remove(ref(db, "teams"));
+  } else if (mockDb) {
+    mockDb.setValueAtPath("teams", {});
   }
 }
 

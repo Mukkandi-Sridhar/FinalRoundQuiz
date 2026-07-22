@@ -1,14 +1,13 @@
 /**
  * ZERO-REFRESH WEBRTC REALTIME ENGINE (PEERJS CLOUD MESH)
- * Allows smartphones and laptops on GitHub Pages to connect in real-time
- * without requiring any Firebase configuration or manual page refreshes!
+ * Supports team removal and roster clearing.
  */
 
 const HOST_PEER_ID = 'quiz_arena_stage_master_v1';
 
 let peer = null;
-let hostConnMap = new Map(); // Host side: teamId -> connection
-let clientConn = null;       // Team side: connection to host
+let hostConnMap = new Map();
+let clientConn = null;
 let isHostMode = false;
 let isConnected = false;
 
@@ -26,20 +25,15 @@ let localQuizState = {
 };
 
 let registeredTeams = {};
-let roundSubmissions = {}; // roundId -> { teamId: sub }
+let roundSubmissions = {};
 
-// Initialize PeerJS
 export function initPeerEngine(isHost = false) {
   isHostMode = isHost;
 
-  if (typeof Peer === 'undefined') {
-    console.warn('PeerJS library not loaded. Falling back to local/cloud sync.');
-    return;
-  }
+  if (typeof Peer === 'undefined') return;
 
   try {
     if (isHost) {
-      // Admin acts as Master Host
       peer = new Peer(HOST_PEER_ID, {
         debug: 1,
         config: {
@@ -51,7 +45,6 @@ export function initPeerEngine(isHost = false) {
       });
 
       peer.on('open', (id) => {
-        console.log('👑 Host WebRTC Engine Online:', id);
         isConnected = true;
         notifyConn(true);
       });
@@ -59,17 +52,7 @@ export function initPeerEngine(isHost = false) {
       peer.on('connection', (conn) => {
         setupHostConnection(conn);
       });
-
-      peer.on('error', (err) => {
-        if (err.type === 'unavailable-id') {
-          // Id taken, host already active elsewhere
-          console.warn('Host ID active elsewhere.');
-        } else {
-          console.warn('PeerJS Host error:', err);
-        }
-      });
     } else {
-      // Team connects to Master Host
       const randomTeamPeerId = 'team_peer_' + Math.random().toString(36).substring(2, 9);
       peer = new Peer(randomTeamPeerId, {
         debug: 1,
@@ -84,11 +67,6 @@ export function initPeerEngine(isHost = false) {
       peer.on('open', () => {
         connectToHost();
       });
-
-      peer.on('error', (err) => {
-        console.warn('PeerJS Team error:', err);
-        setTimeout(connectToHost, 3000);
-      });
     }
   } catch (err) {
     console.warn('Failed to init PeerJS:', err);
@@ -101,11 +79,9 @@ function connectToHost() {
   clientConn = peer.connect(HOST_PEER_ID, { reliable: true });
 
   clientConn.on('open', () => {
-    console.log('🎯 Team Connected to Host WebRTC Channel!');
     isConnected = true;
     notifyConn(true);
 
-    // Register stored team identity if present
     const savedName = localStorage.getItem('quiz_team_name');
     const savedId = localStorage.getItem('quiz_team_id');
     if (savedName && savedId) {
@@ -125,18 +101,10 @@ function connectToHost() {
     notifyConn(false);
     setTimeout(connectToHost, 2000);
   });
-
-  clientConn.on('error', () => {
-    isConnected = false;
-    notifyConn(false);
-    setTimeout(connectToHost, 2000);
-  });
 }
 
-// Host Connection Handler
 function setupHostConnection(conn) {
   conn.on('open', () => {
-    // Send state snapshot to newly connected team
     conn.send({
       type: 'SYNC_STATE',
       payload: {
@@ -152,7 +120,6 @@ function setupHostConnection(conn) {
   });
 
   conn.on('close', () => {
-    // Find team and mark offline
     for (const [tId, c] of hostConnMap.entries()) {
       if (c === conn) {
         if (registeredTeams[tId]) {
@@ -167,7 +134,6 @@ function setupHostConnection(conn) {
   });
 }
 
-// Host Data Dispatcher & Atomic Winner Engine
 function handleHostIncomingData(conn, msg) {
   const { type, payload } = msg;
 
@@ -207,7 +173,6 @@ function handleHostIncomingData(conn, msg) {
       roundSubmissions[questionId][teamId] = subRecord;
       broadcastHostSubmissions(questionId);
 
-      // ATOMIC WINNER DETERMINATION IN HOST MEMORY
       if (!localQuizState.winner && localQuizState.status === 'live') {
         localQuizState.winner = {
           teamId,
@@ -225,7 +190,6 @@ function handleHostIncomingData(conn, msg) {
   }
 }
 
-// Team Client Data Handler
 function handleClientIncomingData(data) {
   const { type, payload } = data;
 
@@ -233,9 +197,6 @@ function handleClientIncomingData(data) {
     case 'SYNC_STATE': {
       localQuizState = payload.quizState;
       registeredTeams = payload.teams;
-      if (payload.quizState?.currentQuestionId && payload.submissions) {
-        roundSubmissions[payload.quizState.currentQuestionId] = payload.submissions;
-      }
       notifyAll();
       break;
     }
@@ -262,22 +223,17 @@ function handleClientIncomingData(data) {
   }
 }
 
-// Broadcast Helpers (Host -> All Connected Teams)
 function broadcastHostState() {
   stateListeners.forEach((cb) => cb(localQuizState));
   hostConnMap.forEach((conn) => {
-    try {
-      conn.send({ type: 'STATE_UPDATE', payload: localQuizState });
-    } catch (e) {}
+    try { conn.send({ type: 'STATE_UPDATE', payload: localQuizState }); } catch (e) {}
   });
 }
 
 function broadcastHostTeams() {
   teamListeners.forEach((cb) => cb(registeredTeams));
   hostConnMap.forEach((conn) => {
-    try {
-      conn.send({ type: 'TEAMS_UPDATE', payload: registeredTeams });
-    } catch (e) {}
+    try { conn.send({ type: 'TEAMS_UPDATE', payload: registeredTeams }); } catch (e) {}
   });
 }
 
@@ -304,10 +260,6 @@ function notifyAll() {
   stateListeners.forEach((cb) => cb(localQuizState));
   teamListeners.forEach((cb) => cb(registeredTeams));
 }
-
-// ==========================================
-// EXPORTED PUBLIC ENGINE APIS
-// ==========================================
 
 export function subscribePeerConn(cb) {
   connListeners.add(cb);
@@ -345,6 +297,28 @@ export function registerPeerTeam(teamId, teamName) {
       type: 'REGISTER_TEAM',
       payload: { teamId, teamName }
     });
+  }
+}
+
+export function removePeerTeam(teamId) {
+  if (isHostMode) {
+    delete registeredTeams[teamId];
+    if (hostConnMap.has(teamId)) {
+      try { hostConnMap.get(teamId).close(); } catch (e) {}
+      hostConnMap.delete(teamId);
+    }
+    broadcastHostTeams();
+  }
+}
+
+export function clearAllPeerTeams() {
+  if (isHostMode) {
+    registeredTeams = {};
+    hostConnMap.forEach((conn) => {
+      try { conn.close(); } catch (e) {}
+    });
+    hostConnMap.clear();
+    broadcastHostTeams();
   }
 }
 

@@ -1,7 +1,6 @@
 /**
  * HOST ADMIN CONTROLLER (STAGE BUZZER ENGINE)
- * Tracks connected teams, highlights the winner team in real-time,
- * and provides one-click round resets.
+ * Tracks connected teams, provides team removal controls, highlights winner team in real-time.
  */
 
 import {
@@ -10,7 +9,9 @@ import {
   subscribeTeams,
   subscribeSubmissions,
   startQuestion,
-  resetQuestion
+  resetQuestion,
+  removeTeam,
+  clearAllTeams
 } from './firebase.js';
 
 // DOM Elements
@@ -31,6 +32,7 @@ const adminStatusText = document.getElementById('admin-status-text');
 const onlineTeamCount = document.getElementById('online-team-count');
 const teamsCountBadge = document.getElementById('teams-count-badge');
 const adminTeamsList = document.getElementById('admin-teams-list');
+const btnClearAllTeams = document.getElementById('btn-clear-all-teams');
 
 const btnStartQuestion = document.getElementById('btn-start-question');
 const btnResetQuestion = document.getElementById('btn-reset-question');
@@ -120,6 +122,14 @@ function setupEventListeners() {
         id: `round_${roundCount}`,
         number: roundCount
       });
+    });
+  }
+
+  if (btnClearAllTeams) {
+    btnClearAllTeams.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to remove ALL registered teams?')) {
+        await clearAllTeams();
+      }
     });
   }
 }
@@ -251,7 +261,19 @@ function renderTeamsRoster() {
     chip.innerHTML = `
       <span class="online-dot"></span>
       <span>${icon}${escapeHtml(t.teamName || t.teamId)}</span>
+      <button class="btn-remove-single-team" data-id="${t.teamId}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:0.75rem; margin-left:6px; font-weight:bold;" title="Remove this team">❌</button>
     `;
+
+    // Attach click handler to remove button
+    const btnRemove = chip.querySelector('.btn-remove-single-team');
+    if (btnRemove) {
+      btnRemove.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`Remove team "${t.teamName || t.teamId}"?`)) {
+          await removeTeam(t.teamId);
+        }
+      });
+    }
 
     adminTeamsList.appendChild(chip);
   });

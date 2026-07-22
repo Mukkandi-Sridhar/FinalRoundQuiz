@@ -1,11 +1,12 @@
 /**
  * TEAM STAGE BUZZER CONTROLLER
- * Ultra-fast single-touch buzzer button with sub-millisecond atomic locking.
+ * Supports real-time admin team removal detection and automatic logout.
  */
 
 import {
   subscribeQuizState,
   subscribeConnectionStatus,
+  subscribeTeams,
   registerTeamPresence,
   submitTeamAnswer
 } from './firebase.js';
@@ -38,12 +39,14 @@ const buzzerSubtext = document.getElementById('buzzer-subtext');
 let currentTeam = { id: '', name: '' };
 let currentRoundState = null;
 let isSubmitting = false;
+let hasLoadedTeamsOnce = false;
 
 function init() {
   loadStoredTeamIdentity();
   setupEventListeners();
   setupConnectionMonitor();
   subscribeToBuzzerState();
+  subscribeToTeamsMonitor();
 }
 
 function loadStoredTeamIdentity() {
@@ -127,6 +130,26 @@ function subscribeToBuzzerState() {
     if (!state) return;
     currentRoundState = state;
     renderBuzzerState(state);
+  });
+}
+
+// Detect if Host Removed this Team
+function subscribeToTeamsMonitor() {
+  subscribeTeams((teamsMap) => {
+    if (!teamsMap) return;
+    const teamKeys = Object.keys(teamsMap);
+
+    if (currentTeam.id) {
+      const isPresent = Boolean(teamsMap[currentTeam.id]);
+      if (!isPresent && hasLoadedTeamsOnce && teamKeys.length >= 0) {
+        // Host kicked/removed team -> reset to login screen
+        localStorage.removeItem('quiz_team_name');
+        localStorage.removeItem('quiz_team_id');
+        currentTeam = { id: '', name: '' };
+        renderTeamLoginUI();
+      }
+    }
+    hasLoadedTeamsOnce = true;
   });
 }
 
